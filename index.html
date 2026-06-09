@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Be a Italian Brainrot</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- ===== Start / Skin select menu ===== -->
+      <div id="menu" class="screen">
+        <div class="menu-card">
+          <h1 class="logo">BE A <span>ITALIAN BRAINROT</span></h1>
+          <p class="tagline">Eat. Grow. Devour everyone. Don't get eaten.</p>
+
+          <div class="picker-label">CHOOSE YOUR BRAINROT</div>
+          <div id="charGrid" class="char-grid"></div>
+
+          <label class="name-row">
+            <span>YOUR NAME</span>
+            <input id="playerName" maxlength="14" placeholder="Player" />
+          </label>
+
+          <button id="playBtn" class="big-btn">PLAY</button>
+          <div class="controls-hint">WASD / Arrows to move &nbsp;•&nbsp; Mouse to look &nbsp;•&nbsp; Shift to sprint</div>
+        </div>
+      </div>
+
+      <!-- ===== In-game HUD ===== -->
+      <div id="hud" class="hidden">
+        <div id="sizeBadge" class="hud-box">
+          <div class="hud-label">SIZE</div>
+          <div id="sizeVal" class="hud-big">1</div>
+        </div>
+        <div id="scoreBadge" class="hud-box">
+          <div class="hud-label">EATEN</div>
+          <div id="scoreVal" class="hud-big">0</div>
+        </div>
+
+        <div id="leaderboard" class="hud-box">
+          <div class="hud-label">LEADERBOARD</div>
+          <ol id="lbList"></ol>
+        </div>
+
+        <div id="sprintBar"><div id="sprintFill"></div></div>
+      </div>
+
+      <!-- ===== Toast / event feed ===== -->
+      <div id="feed"></div>
+
+      <!-- ===== Death / respawn ===== -->
+      <div id="dead" class="screen hidden">
+        <div class="menu-card">
+          <h2 id="deadTitle">YOU GOT DEVOURED!</h2>
+          <p id="deadSub"></p>
+          <button id="respawnBtn" class="big-btn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
