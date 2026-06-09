@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Be a Italian Brainrot</title>
+    <script type="module" crossorigin src="/italian-brainrot-game/assets/index-L-iaD4uN.js"></script>
+    <link rel="stylesheet" crossorigin href="/italian-brainrot-game/assets/index-CTmdKrOE.css">
+  </head>
+  <body>
+    <div id="app">
+      <!-- ===== Start / Skin select menu ===== -->
+      <div id="menu" class="screen">
+        <div class="menu-card">
+          <h1 class="logo">BE A <span>ITALIAN BRAINROT</span></h1>
+          <p class="tagline">Eat. Grow. Devour everyone. Don't get eaten.</p>
+          <div id="bestLine" class="best-line hidden"></div>
+          <div class="picker-label">CHOOSE YOUR BRAINROT</div>
+          <div id="charGrid" class="char-grid"></div>
+          <label class="name-row">
+            <span>YOUR NAME</span>
+            <input id="playerName" maxlength="14" placeholder="Player" />
+          </label>
+          <button id="playBtn" class="big-btn">PLAY</button>
+          <div class="controls-hint">WASD / Arrows to move &nbsp;•&nbsp; Mouse to look &nbsp;•&nbsp; Shift to sprint</div>
+        </div>
+      </div>
+
+      <!-- ===== In-game HUD ===== -->
+      <div id="hud" class="hidden">
+
+        <!-- top center: size to beat -->
+        <div id="sizeToBeat">
+          <div class="stb-line">Size to beat <span id="stbName">—</span></div>
+          <div class="stb-num" id="stbNum">0</div>
+        </div>
+
+        <!-- top left: currency counters -->
+        <div class="counters">
+          <div class="counter">
+            <span class="counter-ico pow" data-icon="power"></span>
+            <span class="counter-val" id="powerVal">0</span>
+            <button class="counter-plus" data-add="50000" title="Add power"><span data-icon="plus"></span></button>
+          </div>
+          <div class="counter">
+            <span class="counter-ico cash" data-icon="money"></span>
+            <span class="counter-val" id="moneyVal">0</span>
+            <button class="counter-plus" data-add-money="1" title="Money"><span data-icon="plus"></span></button>
+          </div>
+        </div>
+
+        <!-- left side button stack -->
+        <div class="side-buttons">
+          <button class="sq-btn" data-action="shop"><span class="sq-ico" data-icon="shop"></span><span class="sq-lbl">Shop</span><span class="badge">!</span></button>
+          <button class="sq-btn" data-action="spin"><span class="sq-ico" data-icon="spin"></span><span class="sq-lbl">Spin</span><span class="badge">!</span></button>
+          <button class="sq-btn" data-action="ugc"><span class="sq-ico" data-icon="star"></span><span class="sq-lbl">UGC Free</span><span class="badge">!</span></button>
+          <button class="sq-btn" data-action="skin"><span class="sq-ico" data-icon="shark"></span><span class="sq-lbl">Skin</span><span class="tag">NEW!</span></button>
+          <button class="sq-btn" data-action="aura"><span class="sq-ico" data-icon="sparkle"></span><span class="sq-lbl">Aura</span><span class="tag">NEW!</span></button>
+          <button class="sq-btn" data-action="daily"><span class="sq-ico" data-icon="calendar"></span><span class="sq-lbl">Daily Reward</span><span class="badge">!</span></button>
+          <button class="sq-btn" data-action="pass"><span class="sq-ico" data-icon="hexpass"></span><span class="sq-lbl">Pass</span></button>
+          <button class="sq-btn" data-action="invite"><span class="sq-ico" data-icon="invite"></span><span class="sq-lbl">Invite Friend</span></button>
+        </div>
+
+        <!-- top right: leaderboard -->
+        <ol id="leaderboard"></ol>
+
+        <!-- right side: gift, auto collect, power buys -->
+        <div class="right-stack">
+          <div class="gift-row">
+            <span class="gift-ico" data-icon="gift"></span>
+            <span class="gift-time" id="giftTime">02:00</span>
+          </div>
+          <button class="auto-btn" data-action="auto">
+            <span class="auto-ico" data-icon="burger"></span><span>Auto Collect</span>
+          </button>
+          <button class="buy-btn green" data-add="5000"><span>+5,000</span><span data-icon="power"></span></button>
+          <button class="buy-btn green" data-add="50000"><span>+50,000</span><span data-icon="power"></span></button>
+          <button class="buy-btn gold" data-add="500000"><span>+500,000</span><span data-icon="power"></span></button>
+          <button class="buy-btn green big" data-add="999999999"><span>+999,999,999</span><span data-icon="power"></span></button>
+        </div>
+
+        <!-- bottom action bar -->
+        <div class="action-bar">
+          <button class="act-side speed" data-action="speed"><span data-icon="shark"></span><span>Speed x2</span></button>
+          <button class="act-kill" data-action="kill">Kill All</button>
+          <button class="act-side power" data-action="powerx2"><span data-icon="power"></span><span>Power x2</span></button>
+        </div>
+
+        <!-- minimap -->
+        <canvas id="minimap" width="170" height="170"></canvas>
+
+        <!-- settings -->
+        <button id="settingsBtn" title="Settings"><span data-icon="gear"></span></button>
+      </div>
+
+      <!-- ===== Shop modal ===== -->
+      <div id="shop" class="modal hidden">
+        <div class="modal-card">
+          <button class="modal-x" data-close>&times;</button>
+          <h2>SHOP</h2>
+          <p class="modal-sub">Spend money (earned by eating) on permanent upgrades. Saved between runs.</p>
+          <div class="shop-money"><span class="counter-ico cash" data-icon="money"></span> <span id="shopMoney">0</span></div>
+          <div id="shopList" class="shop-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== Skin picker modal ===== -->
+      <div id="skinModal" class="modal hidden">
+        <div class="modal-card">
+          <button class="modal-x" data-close>&times;</button>
+          <h2>CHOOSE SKIN</h2>
+          <p class="modal-sub">Switch your brainrot instantly. Free.</p>
+          <div id="skinGrid" class="char-grid"></div>
+        </div>
+      </div>
+
+      <!-- ===== Toast / event feed ===== -->
+      <div id="feed"></div>
+
+      <!-- ===== big center banner (shield removed etc) ===== -->
+      <div id="banner" class="hidden"></div>
+
+      <!-- ===== Death / respawn ===== -->
+      <div id="dead" class="screen hidden">
+        <div class="menu-card">
+          <h2 id="deadTitle">YOU GOT DEVOURED!</h2>
+          <p id="deadSub"></p>
+          <button id="respawnBtn" class="big-btn">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>
