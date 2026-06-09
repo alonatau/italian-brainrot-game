@@ -13,6 +13,7 @@
         <div class="menu-card">
           <h1 class="logo">BE A <span>ITALIAN BRAINROT</span></h1>
           <p class="tagline">Eat. Grow. Devour everyone. Don't get eaten.</p>
+          <div id="bestLine" class="best-line hidden"></div>
           <div class="picker-label">CHOOSE YOUR BRAINROT</div>
           <div id="charGrid" class="char-grid"></div>
           <label class="name-row">
@@ -84,8 +85,32 @@
           <button class="act-side power" data-action="powerx2"><span data-icon="power"></span><span>Power x2</span></button>
         </div>
 
+        <!-- minimap -->
+        <canvas id="minimap" width="170" height="170"></canvas>
+
         <!-- settings -->
         <button id="settingsBtn" title="Settings"><span data-icon="gear"></span></button>
+      </div>
+
+      <!-- ===== Shop modal ===== -->
+      <div id="shop" class="modal hidden">
+        <div class="modal-card">
+          <button class="modal-x" data-close>&times;</button>
+          <h2>SHOP</h2>
+          <p class="modal-sub">Spend money (earned by eating) on permanent upgrades. Saved between runs.</p>
+          <div class="shop-money"><span class="counter-ico cash" data-icon="money"></span> <span id="shopMoney">0</span></div>
+          <div id="shopList" class="shop-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== Skin picker modal ===== -->
+      <div id="skinModal" class="modal hidden">
+        <div class="modal-card">
+          <button class="modal-x" data-close>&times;</button>
+          <h2>CHOOSE SKIN</h2>
+          <p class="modal-sub">Switch your brainrot instantly. Free.</p>
+          <div id="skinGrid" class="char-grid"></div>
+        </div>
       </div>
 
       <!-- ===== Toast / event feed ===== -->

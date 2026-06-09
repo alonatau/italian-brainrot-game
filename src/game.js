@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { CHARACTERS } from './characters.js';
 import { loadCharacterModel } from './loader.js';
 import { Controls } from './input.js';
+import { sfx } from './audio.js';
+import { save } from './save.js';
 
 const ARENA = 75;          // half-extent of the play field (150 x 150)
 const FOOD_COUNT = 190;
@@ -34,6 +36,46 @@ function makeNameSprite(text, color) {
   spr.scale.set(3.2, 0.8, 1);
   spr.renderOrder = 999;
   return spr;
+}
+
+// Reusable burst-particle pool (small emissive cubes that fly out and fade).
+class Particles {
+  constructor(scene, count = 80) {
+    this.pool = [];
+    const geo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true }));
+      m.visible = false;
+      scene.add(m);
+      this.pool.push({ mesh: m, life: 0, vel: new THREE.Vector3() });
+    }
+    this.next = 0;
+  }
+  burst(pos, color, n = 10, power = 1) {
+    for (let i = 0; i < n; i++) {
+      const p = this.pool[this.next];
+      this.next = (this.next + 1) % this.pool.length;
+      p.mesh.position.copy(pos);
+      p.mesh.position.y += 1;
+      p.mesh.material.color.set(color);
+      p.mesh.visible = true;
+      p.life = 0.6;
+      const a = Math.random() * Math.PI * 2, up = 3 + Math.random() * 5;
+      p.vel.set(Math.cos(a) * 4 * power, up, Math.sin(a) * 4 * power);
+      p.mesh.scale.setScalar(0.6 + power * 0.6);
+    }
+  }
+  update(dt) {
+    for (const p of this.pool) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.vel.y -= 14 * dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.material.opacity = Math.max(0, p.life / 0.6);
+      p.mesh.rotation.x += dt * 6; p.mesh.rotation.y += dt * 6;
+      if (p.life <= 0) p.mesh.visible = false;
+    }
+  }
 }
 
 class Entity {
@@ -100,6 +142,9 @@ export class Game {
     this.boost = { speed: 0, power: 0, auto: false, killCd: 0, speedCd: 0, powerCd: 0 };
     this.stamina = 1;
     this.giftTime = 120; // seconds until next gift
+    this.upgrades = { speed: 0, magnet: 0, gift: 0, start: 0 };
+    this.bestThisLife = 0;
+    this.wasKing = false;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -114,6 +159,7 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
     this.controls = new Controls(this.renderer.domElement);
 
+    this.particles = new Particles(this.scene);
     this._buildWorld();
     this._resize();
     window.addEventListener('resize', () => this._resize());
@@ -223,17 +269,20 @@ export class Game {
   }
 
   // ---- lifecycle ----------------------------------------------------------
-  async start(playerChar, playerName) {
+  async start(playerChar, playerName, upgrades) {
     for (const e of this.entities) this.scene.remove(e.group);
     this.entities = [];
-    this.money = 0;
+    this.money = save.money();
+    this.upgrades = { speed: 0, magnet: 0, gift: 0, start: 0, ...(upgrades || {}) };
     this.boost = { speed: 0, power: 0, auto: false, killCd: 0, speedCd: 0, powerCd: 0 };
-    this.giftTime = 120;
+    this.giftTime = this._giftInterval();
+    this.bestThisLife = 0;
+    this.wasKing = false;
 
     this.player = new Entity(playerChar, playerName || 'Player', true);
     await this.player.loadModel();
     this.scene.add(this.player.group);
-    this.player.spawnAt(0, 0, 10);
+    this.player.spawnAt(0, 0, 10 + this.upgrades.start * 250);
     this.entities.push(this.player);
 
     const names = [...BOT_NAMES].sort(() => Math.random() - 0.5);
@@ -256,22 +305,34 @@ export class Game {
 
   respawnPlayer() {
     const p = this.player;
-    this.money = 0;
+    this.money = save.money();
+    this.upgrades = { speed: 0, magnet: 0, gift: 0, start: 0, ...save.upgrades() };
     this.boost = { speed: 0, power: 0, auto: false, killCd: 0, speedCd: 0, powerCd: 0 };
+    this.giftTime = this._giftInterval();
+    this.bestThisLife = 0;
+    this.wasKing = false;
     const x = (Math.random() * 2 - 1) * (ARENA - 10);
     const z = (Math.random() * 2 - 1) * (ARENA - 10);
-    p.spawnAt(x, z, 10);
+    p.spawnAt(x, z, 10 + this.upgrades.start * 250);
     this.running = true;
     this.controls.requestLock();
     this.clock.getDelta();
   }
 
+  _giftInterval() { return Math.max(40, 120 - this.upgrades.gift * 15); }
+  _speedMul() { return 1 + this.upgrades.speed * 0.06; }
+
   // ---- player-facing actions (called by HUD buttons) ----------------------
-  addPower(n) { if (this.player?.alive) { this.player.power += n; this.player.applyScale(); } }
+  addPower(n) {
+    if (!this.player?.alive) return;
+    this.player.power += n;
+    this.player.applyScale();
+    this.particles.burst(this.player.pos, this.player.char.color, 8, 1);
+  }
   async changeSkin(char) { if (this.player) await this.player.setCharacter(char); }
-  activateSpeed() { if (this.boost.speedCd <= 0) { this.boost.speed = 8; this.boost.speedCd = 22; } }
-  activatePower() { if (this.boost.powerCd <= 0) { this.boost.power = 8; this.boost.powerCd = 22; } }
-  toggleAuto() { this.boost.auto = !this.boost.auto; return this.boost.auto; }
+  activateSpeed() { if (this.boost.speedCd <= 0) { this.boost.speed = 8; this.boost.speedCd = 22; sfx.boost(); return true; } return false; }
+  activatePower() { if (this.boost.powerCd <= 0) { this.boost.power = 8; this.boost.powerCd = 22; sfx.boost(); return true; } return false; }
+  toggleAuto() { this.boost.auto = !this.boost.auto; sfx.click(); return this.boost.auto; }
   killAll() {
     if (this.boost.killCd > 0 || !this.player?.alive) return 0;
     this.boost.killCd = 45;
@@ -280,11 +341,13 @@ export class Game {
       if (e.isPlayer || !e.alive) continue;
       if (e.power < this.player.power) {
         this.player.power += e.power * 0.5; eaten++;
+        this.particles.burst(e.pos, e.char.color, 12, 1.4);
         e.alive = false; e.group.visible = false;
         this._respawnBot(e);
       }
     }
     this.player.applyScale();
+    if (eaten) sfx.bigEat();
     return eaten;
   }
 
@@ -300,6 +363,7 @@ export class Game {
       this._hud(dt);
     }
     for (const f of this.foods) f.rotation.y += f.userData.spin * dt;
+    this.particles.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -312,8 +376,10 @@ export class Game {
     b.powerCd = Math.max(0, b.powerCd - dt);
     this.giftTime -= dt;
     if (this.giftTime <= 0) {
-      this.giftTime = 120;
+      this.giftTime = this._giftInterval();
       this.addPower(2500);
+      sfx.gift();
+      if (this.player?.alive) this.particles.burst(this.player.pos, 0xffd23f, 18, 1.4);
       this.ui.onEat('Gift: +2,500 power!');
     }
   }
@@ -322,7 +388,7 @@ export class Game {
     const p = this.player;
     if (!p.alive) return;
     const dir = this.controls.moveVector();
-    let speed = moveSpeed(p.power) * (this.boost.speed > 0 ? 1.8 : 1);
+    let speed = moveSpeed(p.power) * this._speedMul() * (this.boost.speed > 0 ? 1.8 : 1);
     if (this.controls.sprinting && this.stamina > 0.05) { speed *= 1.4; this.stamina -= dt / 3; }
     else this.stamina = Math.min(1, this.stamina + dt / 6);
 
@@ -387,8 +453,10 @@ export class Game {
 
   _eatFood(e, dt) {
     const eatR = collRadius(e.power) + 0.6;
+    // permanent magnet upgrade widens the player's base pickup; Auto Collect adds more
+    const magBase = e.isPlayer ? eatR + this.upgrades.magnet * 2 : eatR;
     const auto = e.isPlayer && this.boost.auto;
-    const magnetR = auto ? 14 : eatR;
+    const magnetR = auto ? Math.max(14, magBase) : magBase;
     for (const f of this.foods) {
       const dx = f.position.x - e.pos.x, dz = f.position.z - e.pos.z;
       const d2 = dx * dx + dz * dz;
@@ -402,7 +470,11 @@ export class Game {
         const gain = 20 * (e.isPlayer && this.boost.power > 0 ? 2 : 1) * (0.8 + Math.random() * 0.4);
         e.power += gain;
         e.applyScale();
-        if (e.isPlayer) this.money += 5;
+        if (e.isPlayer) {
+          this.money += 5;
+          sfx.eat();
+          this.particles.burst(f.position, f.material.color.getHex(), 5, 0.7);
+        }
         this._placeFood(f);
       }
     }
@@ -417,14 +489,17 @@ export class Game {
         if (a.pos.distanceTo(b.pos) < collRadius(a.power)) {
           a.power += b.power * 0.55;
           a.applyScale();
+          this.particles.burst(b.pos, b.char.color, 16, 1.6);
           b.alive = false;
           b.group.visible = false;
           if (b.isPlayer) {
             this.running = false;
+            sfx.death();
             this.controls.releaseLock();
             this.ui.onDeath(a.name, a.power, b.power);
           } else if (a.isPlayer) {
             this.money += 50;
+            sfx.bigEat();
             this.ui.onEat(`Devoured ${b.name}!`);
             this._respawnBot(b);
           } else {
@@ -471,6 +546,16 @@ export class Game {
     this.ui.onStats(Math.round(p.power), this.money, this.stamina);
     this.ui.onBoosts(this.boost);
     this.ui.onGift(this.giftTime);
+    if (p.power > this.bestThisLife) this.bestThisLife = p.power;
+
+    // minimap every frame (cheap)
+    this.ui.onMinimap({
+      arena: ARENA,
+      dots: this.entities.filter((e) => e.alive).map((e) => ({
+        x: e.pos.x, z: e.pos.z, color: e.char.color, me: e.isPlayer,
+        r: Math.max(2, visualScale(e.power) * 1.4),
+      })),
+    });
 
     this._lbTimer -= dt;
     if (this._lbTimer <= 0) {
@@ -480,11 +565,20 @@ export class Game {
       const above = myRank > 0 ? ranked[myRank - 1] : null;
       this.ui.onSizeToBeat(above ? above.name : null, above ? Math.round(above.power) : 0);
 
+      // win = reach rank #1 (announce once per life)
+      if (myRank === 0 && !this.wasKing) {
+        this.wasKing = true;
+        sfx.win();
+        this.particles.burst(p.pos, 0xffd23f, 30, 2);
+        this.ui.onWin(Math.round(p.power));
+      } else if (myRank > 0) {
+        this.wasKing = false;
+      }
+
       const rows = ranked.slice(0, 8).map((e, i) => ({
         rank: i + 1, name: e.name, power: Math.round(e.power),
         color: e.char.color, me: e.isPlayer,
       }));
-      // make sure the player is visible even if outside top 8
       if (myRank >= 8) {
         rows.push({ rank: myRank + 1, name: p.name, power: Math.round(p.power), color: p.char.color, me: true });
       }
