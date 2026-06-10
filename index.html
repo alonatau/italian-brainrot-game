@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Be a Italian Brainrot</title>
-    <script type="module" crossorigin src="/italian-brainrot-game/assets/index-FLld53LM.js"></script>
-    <link rel="stylesheet" crossorigin href="/italian-brainrot-game/assets/index-dKYtC3qh.css">
+    <script type="module" crossorigin src="/italian-brainrot-game/assets/index-Bvt3pUEp.js"></script>
+    <link rel="stylesheet" crossorigin href="/italian-brainrot-game/assets/index-Crb2BuCj.css">
   </head>
   <body>
     <div id="app">
@@ -22,6 +22,7 @@
             <input id="playerName" maxlength="14" placeholder="Player" />
           </label>
           <button id="playBtn" class="big-btn">PLAY</button>
+          <div class="how-to">Eat <b>food</b> and <b style="color:#57e06a">green</b> players to grow. Avoid <b style="color:#ff6b6b">red</b> players — they eat you!</div>
           <div class="controls-hint">WASD / Arrows to move &nbsp;•&nbsp; Mouse to look &nbsp;•&nbsp; Shift to sprint</div>
         </div>
       </div>
@@ -33,6 +34,13 @@
         <div id="sizeToBeat">
           <div class="stb-line">Size to beat <span id="stbName">—</span></div>
           <div class="stb-num" id="stbNum">0</div>
+          <div id="shieldChip" class="hidden">SHIELDED <span id="shieldSecs">6</span>s</div>
+        </div>
+
+        <!-- color legend: who you can eat / who eats you -->
+        <div id="legend">
+          <span><i class="dot green"></i> you can eat</span>
+          <span><i class="dot red"></i> eats you — run!</span>
         </div>
 
         <!-- top left: currency counters -->
